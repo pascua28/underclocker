@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
 
         String min = Utils.runCmd("cat /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_min_freq").trim();
         String max = Utils.runCmd("cat /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq").trim();
-        String rangeText = "Current range: " + min + " - " + max + " kHz";
+        String rangeText = "Current range: " + toMHz(min) + " - " + toMHz(max) + " MHz";
 
         switch (policy) {
             case "policy0": textRange0.setText(rangeText); break;
@@ -129,22 +129,46 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private String toMHz(String freqStr) {
+        try {
+            return String.valueOf(Integer.parseInt(freqStr.trim()) / 1000);
+        } catch (NumberFormatException e) {
+            return "--";
+        }
+    }
+
     private void startFrequencyUpdates() {
         freqUpdater = new Runnable() {
             @Override
             public void run() {
-                textCur0.setText("Current: " + readFreq("policy0") + " kHz");
-                textCur3.setText("Current: " + readFreq("policy3") + " kHz");
-                textCur7.setText("Current: " + readFreq("policy7") + " kHz");
-                handler.postDelayed(this, 2000);
+                textCur0.setText("Current: " + readFreq("policy0"));
+                textCur3.setText("Current: " + readFreq("policy3"));
+                textCur7.setText("Current: " + readFreq("policy7"));
+
+                textRange0.setText("Current range: " + readRange("policy0"));
+                textRange3.setText("Current range: " + readRange("policy3"));
+                textRange7.setText("Current range: " + readRange("policy7"));
+
+                handler.postDelayed(this, 2000); // every 2 seconds
             }
         };
         handler.post(freqUpdater);
     }
 
+    private String readRange(String policy) {
+        String min = Utils.runCmd("cat /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_min_freq").trim();
+        String max = Utils.runCmd("cat /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq").trim();
+        return toMHz(min) + " - " + toMHz(max) + " MHz";
+    }
+
     private String readFreq(String policy) {
         String result = Utils.runCmd("cat /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_cur_freq");
-        return result.isEmpty() ? "--" : result.trim();
+        if (result.isEmpty()) return "--";
+        try {
+            return (Integer.parseInt(result.trim()) / 1000) + " MHz";
+        } catch (NumberFormatException e) {
+            return "--";
+        }
     }
 
     private void applyFrequencies() {
