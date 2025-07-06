@@ -1,0 +1,71 @@
+package com.sammy.underclocker;
+
+import android.app.*;
+import android.content.*;
+import android.os.*;
+import androidx.core.app.NotificationCompat;
+
+public class FrequencyService extends Service {
+
+    private final String[] policies = {"policy0", "policy3", "policy7"};
+    private SharedPreferences prefs;
+
+    private final BroadcastReceiver stateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            applyFrequencies();
+        }
+    };
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        prefs = getSharedPreferences("UnderclockerPrefs", MODE_PRIVATE);
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
+        filter.addAction(Intent.ACTION_POWER_CONNECTED);
+        filter.addAction(Intent.ACTION_POWER_DISCONNECTED);
+        registerReceiver(stateReceiver, filter);
+
+        NotificationChannel channel = new NotificationChannel(
+                "underclocker_channel", "Underclocker", NotificationManager.IMPORTANCE_LOW);
+        ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).createNotificationChannel(channel);
+
+        Notification notification = new NotificationCompat.Builder(this, "underclocker_channel")
+                .setContentTitle("Underclocker running")
+                .setContentText("Monitoring CPU frequency states")
+                .setSmallIcon(android.R.drawable.stat_notify_sync)
+                .build();
+
+        startForeground(1, notification);
+    }
+
+    private void applyFrequencies() {
+        for (String policy : policies) {
+            String sel = prefs.getString(policy, "unchanged");
+            if (sel != null && !"unchanged".equals(sel)) {
+                String cur = Utils.runCmd("cat /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq");
+                if (!cur.isEmpty()) {
+                    try {
+                        long currentFreq = Long.parseLong(cur.trim());
+                        long selectedFreq = Long.parseLong(sel.trim());
+                        if (selectedFreq < currentFreq) {
+                            Utils.runCmd("echo " + sel + " > /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq");
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) { return null; }
+
+    @Override
+    public void onDestroy() {
+        unregisterReceiver(stateReceiver);
+        super.onDestroy();
+    }
+}
