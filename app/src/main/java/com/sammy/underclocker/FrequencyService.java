@@ -1,8 +1,17 @@
 package com.sammy.underclocker;
 
-import android.app.*;
-import android.content.*;
-import android.os.*;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.os.IBinder;
+
 import androidx.core.app.NotificationCompat;
 
 public class FrequencyService extends Service {
@@ -54,14 +63,17 @@ public class FrequencyService extends Service {
                         if (selectedFreq < currentFreq) {
                             Utils.runCmd("echo " + sel + " > /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq");
                         }
-                    } catch (NumberFormatException ignored) {}
+                    } catch (NumberFormatException ignored) {
+                    }
                 }
             }
         }
     }
 
     @Override
-    public IBinder onBind(Intent intent) { return null; }
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 
     @Override
     public void onDestroy() {

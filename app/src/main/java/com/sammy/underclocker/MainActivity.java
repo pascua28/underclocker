@@ -1,41 +1,58 @@
 package com.sammy.underclocker;
 
-import android.content.*;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.os.*;
-import android.widget.*;
+import android.os.Bundle;
+import android.os.Handler;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import rikka.shizuku.Shizuku;
 
 public class MainActivity extends AppCompatActivity {
 
+    private final String[] policies = {"policy0", "policy3", "policy7"};
+    private final Map<String, Spinner> spinnerMap = new HashMap<>();
+    private final Shizuku.OnRequestPermissionResultListener REQUEST_PERMISSION_RESULT_LISTENER = this::onRequestPermissionsResult;
     Spinner spinner0, spinner3, spinner7;
     TextView textCur0, textCur3, textCur7;
     TextView textRange0, textRange3, textRange7;
     Button saveButton;
-
-    private final String[] policies = {"policy0", "policy3", "policy7"};
-    private final Map<String, Spinner> spinnerMap = new HashMap<>();
-
     SharedPreferences prefs;
-    private Handler handler = new Handler();
-    private Runnable freqUpdater;
-
-    private final Shizuku.OnRequestPermissionResultListener REQUEST_PERMISSION_RESULT_LISTENER = this::onRequestPermissionsResult;
-
-    private void onRequestPermissionsResult(int requestCode, int grantResult) {
-        if (grantResult == PackageManager.PERMISSION_GRANTED)
-            forceStop(this);
-    }
-
     private final BroadcastReceiver stateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             applyFrequencies();
         }
     };
+    private Handler handler = new Handler();
+    private Runnable freqUpdater;
+
+    public static void forceStop(Context context) {
+        String packageName = context.getPackageName();
+        Toast.makeText(context, "Shizuku granted. Please restart.", Toast.LENGTH_SHORT).show();
+        Utils.runCmd("am force-stop " + packageName);
+    }
+
+    private void onRequestPermissionsResult(int requestCode, int grantResult) {
+        if (grantResult == PackageManager.PERMISSION_GRANTED)
+            forceStop(this);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,7 +96,8 @@ public class MainActivity extends AppCompatActivity {
                         if (selectedFreq < currentFreq) {
                             Utils.runCmd("echo " + selected + " > /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq");
                         }
-                    } catch (NumberFormatException ignored) {}
+                    } catch (NumberFormatException ignored) {
+                    }
                 }
             }
             editor.apply();
@@ -96,11 +114,7 @@ public class MainActivity extends AppCompatActivity {
         startFrequencyUpdates();
 
         Intent svcIntent = new Intent(this, FrequencyService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(svcIntent);
-        } else {
-            startService(svcIntent);
-        }
+        startForegroundService(svcIntent);
     }
 
     private void setupSpinner(String policy) {
@@ -134,9 +148,15 @@ public class MainActivity extends AppCompatActivity {
         String rangeText = "Current range: " + toMHz(min) + " - " + toMHz(max) + " MHz";
 
         switch (policy) {
-            case "policy0": textRange0.setText(rangeText); break;
-            case "policy3": textRange3.setText(rangeText); break;
-            case "policy7": textRange7.setText(rangeText); break;
+            case "policy0":
+                textRange0.setText(rangeText);
+                break;
+            case "policy3":
+                textRange3.setText(rangeText);
+                break;
+            case "policy7":
+                textRange7.setText(rangeText);
+                break;
         }
     }
 
@@ -194,16 +214,11 @@ public class MainActivity extends AppCompatActivity {
                         if (selectedFreq < currentFreq) {
                             Utils.runCmd("echo " + sel + " > /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq");
                         }
-                    } catch (NumberFormatException ignored) {}
+                    } catch (NumberFormatException ignored) {
+                    }
                 }
             }
         }
-    }
-
-    public static void forceStop(Context context) {
-        String packageName = context.getPackageName();
-        Toast.makeText(context, "Shizuku granted. Please restart.", Toast.LENGTH_SHORT).show();
-        Utils.runCmd("am force-stop " + packageName);
     }
 
     @Override
