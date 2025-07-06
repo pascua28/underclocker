@@ -71,9 +71,6 @@ public class Utils {
         return false;
     }
 
-    public static boolean isShizuku() {
-        return shizukuCheckPermission();
-    }
     public static String runCmd(String commands) {
         if (!isPrivileged())
             return "";
