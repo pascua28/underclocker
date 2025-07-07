@@ -3,6 +3,7 @@ package com.sammy.underclocker;
 import android.content.pm.PackageManager;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 
@@ -72,16 +73,33 @@ public class Utils {
     }
 
     public static String runCmd(String commands) {
-        if (!isPrivileged())
-            return "";
-
-        if (shizukuCheckPermission()) {
+        if (isPrivileged()) {
+                try {
+                    return runProcess(exec(commandsToShCommand(commands)));
+                } catch (Exception ignored) {
+                    return "";
+                }
+        } else {
             try {
-                return runProcess(exec(commandsToShCommand(commands)));
-            } catch (Exception ignored) {
+                String cmds[] = {
+                        "/system/bin/sh",
+                        "-c",
+                        "echo " + "\"" + commands + "\"" + " | nc localhost 1337"
+                };
+
+                Process process = Runtime.getRuntime().exec(cmds);
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(process.getInputStream()));
+
+                StringBuilder output = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+                return output.toString();
+            } catch (IOException ignored) {
                 return "";
             }
         }
-        return "";
     }
 }

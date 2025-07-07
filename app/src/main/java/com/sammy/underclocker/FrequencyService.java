@@ -15,7 +15,6 @@ import android.os.IBinder;
 import androidx.core.app.NotificationCompat;
 
 public class FrequencyService extends Service {
-
     private final String[] policies = {"policy0", "policy3", "policy7"};
     private SharedPreferences prefs;
 
