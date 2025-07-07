@@ -88,17 +88,8 @@ public class MainActivity extends AppCompatActivity {
                 String selected = spinnerMap.get(policy).getSelectedItem().toString();
                 editor.putString(policy, selected);
 
-                if (!"unchanged".equals(selected)) {
-                    String cur = Utils.runCmd("cat /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq").trim();
-                    try {
-                        long currentFreq = Long.parseLong(cur);
-                        long selectedFreq = Long.parseLong(selected);
-                        if (selectedFreq < currentFreq) {
-                            Utils.runCmd("echo " + selected + " > /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq");
-                        }
-                    } catch (NumberFormatException ignored) {
-                    }
-                }
+                if (!"unchanged".equals(selected))
+                    Utils.runCmd("echo " + selected + " > /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq");
             }
             editor.apply();
             Toast.makeText(this, "Frequencies saved", Toast.LENGTH_SHORT).show();
