@@ -14,14 +14,16 @@ import android.os.IBinder;
 
 import androidx.core.app.NotificationCompat;
 
+import java.util.List;
+
 public class FrequencyService extends Service {
-    private final String[] policies = {"policy0", "policy3", "policy7"};
+    private List<String> policies;
     private SharedPreferences prefs;
 
     private final BroadcastReceiver stateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            applyFrequencies();
+            applyFrequencies(context);
         }
     };
 
@@ -29,6 +31,7 @@ public class FrequencyService extends Service {
     public void onCreate() {
         super.onCreate();
         prefs = getSharedPreferences("UnderclockerPrefs", MODE_PRIVATE);
+        policies = Utils.detectAvailablePolicies();
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_SCREEN_ON);
@@ -50,20 +53,18 @@ public class FrequencyService extends Service {
         startForeground(1, notification);
     }
 
-    private void applyFrequencies() {
+    private void applyFrequencies(Context context) {
         for (String policy : policies) {
-            String sel = prefs.getString(policy, "unchanged");
-            if (sel != null && !"unchanged".equals(sel)) {
-                String cur = Utils.runCmd("cat /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq");
-                if (!cur.isEmpty()) {
-                    try {
-                        long currentFreq = Long.parseLong(cur.trim());
-                        long selectedFreq = Long.parseLong(sel.trim());
-                        if (selectedFreq < currentFreq) {
-                            Utils.runCmd("echo " + sel + " > /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq");
-                        }
-                    } catch (NumberFormatException ignored) {
+            String saved = prefs.getString(policy, "unchanged");
+            if (!"unchanged".equals(saved)) {
+                String current = Utils.runCmd("cat /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq").trim();
+                try {
+                    long currentFreq = Long.parseLong(current);
+                    long selectedFreq = Long.parseLong(saved);
+                    if (selectedFreq < currentFreq) {
+                        Utils.runCmd("echo " + selectedFreq + " > /sys/devices/system/cpu/cpufreq/" + policy + "/scaling_max_freq");
                     }
+                } catch (NumberFormatException ignored) {
                 }
             }
         }

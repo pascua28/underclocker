@@ -6,6 +6,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 import rikka.shizuku.Shizuku;
 import rikka.shizuku.ShizukuRemoteProcess;
@@ -101,5 +103,22 @@ public class Utils {
                 return "";
             }
         }
+    }
+
+    public static List<String> detectAvailablePolicies() {
+        List<String> policies = new ArrayList<>();
+        String output = Utils.runCmd("ls /sys/devices/system/cpu/cpufreq/");
+        if (output == null || output.isEmpty()) return policies;
+
+        String[] entries = output.split("\\s+");
+        for (String entry : entries) {
+            if (entry.startsWith("policy")) {
+                String test = Utils.runCmd("test -f /sys/devices/system/cpu/cpufreq/" + entry + "/scaling_max_freq && echo ok");
+                if ("ok".equals(test.trim())) {
+                    policies.add(entry);
+                }
+            }
+        }
+        return policies;
     }
 }

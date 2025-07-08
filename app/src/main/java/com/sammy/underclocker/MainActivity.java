@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(scrollView);
 
         prefs = getSharedPreferences("UnderclockerPrefs", MODE_PRIVATE);
-        detectedPolicies = detectAvailablePolicies();
+        detectedPolicies = Utils.detectAvailablePolicies();
 
         for (String policy : detectedPolicies) {
             addPolicyUI(policy);
@@ -170,23 +170,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             spinner.setSelection(0);
         }
-    }
-
-    private List<String> detectAvailablePolicies() {
-        List<String> policies = new ArrayList<>();
-        String output = Utils.runCmd("ls /sys/devices/system/cpu/cpufreq/");
-        if (output == null || output.isEmpty()) return policies;
-
-        String[] entries = output.split("\\s+");
-        for (String entry : entries) {
-            if (entry.startsWith("policy")) {
-                String test = Utils.runCmd("test -f /sys/devices/system/cpu/cpufreq/" + entry + "/scaling_max_freq && echo ok");
-                if ("ok".equals(test.trim())) {
-                    policies.add(entry);
-                }
-            }
-        }
-        return policies;
     }
 
     private void startFrequencyUpdates() {
